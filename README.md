@@ -50,3 +50,46 @@ openssl pkcs12 -in keystore.p12 -out keystore.pem -nodes -password pass:mypasswo
 base64 keystore.pem > keystore.b64
 
 ```
+
+3. Create a Kubernetes secret using the kubectl command:
+```bash
+kubectl create secret generic nifi-keystore --from-file=keystore.b64
+
+```
+This command creates a new Kubernetes secret named nifi-keystore and sets its contents to the base64-encoded value of the keystore.pem file.
+
+You can now reference this secret in your Kubernetes deployment configuration, for example:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nifi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nifi
+  template:
+    metadata:
+      labels:
+        app: nifi
+    spec:
+      containers:
+      - name: nifi
+        image: apache/nifi:latest
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: nifi-keystore
+          mountPath: /opt/nifi/nifi-current/conf/keystore.jks
+        - name: nifi-truststore
+          mountPath: /opt/nifi/nifi-current/conf/truststore.jks
+      volumes:
+      - name: nifi-keystore
+        secret:
+          secretName: nifi-keystore
+      - name: nifi-truststore
+        secret:
+          secretName: nifi-truststore
+
+```
